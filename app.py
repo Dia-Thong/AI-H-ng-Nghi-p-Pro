@@ -94,7 +94,7 @@ elif st.session_state.active_tab == "Chat":
             with st.spinner("Đang phân tích..."):
                 try:
                     response = client.models.generate_content(
-                       model="gemini-1.5-flash-latest",
+                      model="gemini-2.0-flash-exp",
                         contents=enhanced_prompt,
                         config=types.GenerateContentConfig(system_instruction=system_prompt, temperature=0.4)
                     )
