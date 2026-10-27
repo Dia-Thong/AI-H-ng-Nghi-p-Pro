@@ -39,7 +39,7 @@ Bạn là Chuyên gia Tư vấn Hướng nghiệp học đường.
 
 # Cấu hình AI chuẩn
 model = genai.GenerativeModel(
-   model_name="gemini-pro",
+model="gemini-1.5-flash",
     system_instruction=system_prompt,
     generation_config={"temperature": 0.4}
 )
