@@ -1,6 +1,5 @@
 import streamlit as st
 import google.generativeai as genai
-import os
 
 # --- CẤU HÌNH TRANG & CSS ---
 st.set_page_config(page_title="AI Hướng Nghiệp Pro", page_icon="🧭", layout="wide")
@@ -19,30 +18,16 @@ st.markdown("""
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 except Exception as e:
-    st.error("⚠️ Chưa tìm thấy API Key trong Secrets.")
+    st.error("⚠️ Chưa tìm thấy API Key trong Secrets. Vui lòng kiểm tra lại góc dưới bên phải màn hình (Manage app -> Settings -> Secrets).")
 
 try:
     with open("dulieu_tuyensinh.txt", "r", encoding="utf-8") as f:
         tuyen_sinh_data = f.read()
 except:
-    tuyen_sinh_data = "Chưa có dữ liệu."
+    tuyen_sinh_data = "Chưa có dữ liệu. Vui lòng tải file dulieu_tuyensinh.txt lên GitHub."
 
-system_prompt = f"""
-Bạn là Chuyên gia Tư vấn Hướng nghiệp học đường.
-1. ĐỐI CHIẾU NĂNG LỰC: Dựa vào [HỒ SƠ HỌC SINH], trích xuất thông tin từ [TỪ ĐIỂN NGÀNH NGHỀ] để tư vấn. Giải thích rõ vì sao hợp hoặc không.
-2. Không bịa đặt số liệu, chỉ dùng dữ liệu trong sổ tay.
-3. Xưng "chuyên gia", gọi "em". Cấu trúc rõ ràng, có gạch đầu dòng.
-
-[TỪ ĐIỂN NGÀNH NGHỀ & TUYỂN SINH]:
-{tuyen_sinh_data}
-"""
-
-# Cấu hình AI chuẩn
-model = genai.GenerativeModel(
-model="gemini-1.5-flash",
-    system_instruction=system_prompt,
-    generation_config={"temperature": 0.4}
-)
+# Lệnh gọi mô hình siêu cơ bản (Chống sập hoàn toàn)
+model = genai.GenerativeModel("gemini-1.5-flash")
 
 # --- BIẾN LƯU TRỮ ---
 if "messages" not in st.session_state: st.session_state.messages = []
@@ -82,28 +67,38 @@ if st.session_state.active_tab == "Hoso":
 
         if st.form_submit_button("🚀 LƯU HỒ SƠ & BẮT ĐẦU TƯ VẤN", use_container_width=True):
             st.session_state.full_profile = {"Sở thích": ", ".join(holland), "Năng lực": ", ".join(nang_luc), "Tính cách": tinh_cach, "Động lực": ", ".join(dong_luc), "Môn giỏi": ", ".join(mon_gioi), "Học lực": hoc_luc, "Tài chính": ngan_sach, "Rào cản": ", ".join(rao_can)}
-            st.success("✅ Đã lưu! Hãy bấm sang Bước 2.")
+            st.success("✅ Đã lưu hồ sơ thành công! Mời bạn bấm sang BƯỚC 2.")
 
 elif st.session_state.active_tab == "Chat":
-    if st.session_state.full_profile: st.info("🤖 **AI đã sẵn sàng tư vấn dựa trên hồ sơ của bạn!**")
-    else: st.warning("⚠️ Vui lòng hoàn thành Bước 1 trước.")
+    if st.session_state.full_profile: st.info("🤖 **AI đã nhận hồ sơ của bạn và sẵn sàng tư vấn!**")
+    else: st.warning("⚠️ Hãy hoàn thành 'Bước 1: Tạo siêu hồ sơ' trước để AI tư vấn chính xác nhất.")
 
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"]): st.markdown(msg["content"])
 
-    if user_input := st.chat_input("Nhập câu hỏi..."):
+    if user_input := st.chat_input("Nhập câu hỏi hoặc băn khoăn của bạn..."):
         with st.chat_message("user"): st.markdown(user_input)
         st.session_state.messages.append({"role": "user", "content": user_input})
         
+        # Gộp toàn bộ Hướng dẫn + Dữ liệu + Hồ sơ thành 1 cục (Bypass lỗi thư viện)
         prof = st.session_state.full_profile
-        context_str = f"[HỒ SƠ HỌC SINH] Sở thích: {prof.get('Sở thích')} | Năng lực: {prof.get('Năng lực')} | Tính cách: {prof.get('Tính cách')} | Môn giỏi: {prof.get('Môn giỏi')} | Học lực: {prof.get('Học lực')} | Tài chính: {prof.get('Tài chính')} | Rào cản: {prof.get('Rào cản')}" if prof else ""
-        enhanced_prompt = f"{context_str}\n\n[CÂU HỎI]: {user_input}" if context_str else user_input
+        context_str = f"[HỒ SƠ HỌC SINH]\nSở thích: {prof.get('Sở thích')} | Năng lực: {prof.get('Năng lực')} | Tính cách: {prof.get('Tính cách')} | Môn giỏi: {prof.get('Môn giỏi')} | Học lực: {prof.get('Học lực')} | Tài chính: {prof.get('Tài chính')} | Rào cản: {prof.get('Rào cản')}" if prof else "Học sinh chưa tạo hồ sơ."
+        
+        master_prompt = f"""Bạn là Chuyên gia Tư vấn Hướng nghiệp học đường.
+Nhiệm vụ: Đối chiếu năng lực từ [HỒ SƠ HỌC SINH] với thông tin trong [TỪ ĐIỂN NGÀNH NGHỀ] để tư vấn. Giải thích rõ vì sao hợp hoặc không hợp. Không bịa đặt số liệu. Xưng "chuyên gia", gọi "em". Trình bày rõ ràng.
+
+[TỪ ĐIỂN NGÀNH NGHỀ & TUYỂN SINH]:
+{tuyen_sinh_data}
+
+{context_str}
+
+[CÂU HỎI CỦA HỌC SINH]: {user_input}"""
 
         with st.chat_message("assistant"):
-            with st.spinner("Đang phân tích..."):
+            with st.spinner("AI đang phân tích dữ liệu..."):
                 try:
-                    response = model.generate_content(enhanced_prompt)
+                    response = model.generate_content(master_prompt)
                     st.markdown(response.text)
                     st.session_state.messages.append({"role": "assistant", "content": response.text})
                 except Exception as e:
-                    st.error(f"Lỗi: {e}")
+                    st.error(f"Lỗi phản hồi từ AI: {e}")
