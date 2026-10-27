@@ -1,6 +1,5 @@
 import streamlit as st
-from google import genai
-from google.genai import types
+import google.generativeai as genai
 import os
 
 # --- CẤU HÌNH TRANG & CSS ---
@@ -17,7 +16,10 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- KHỞI TẠO AI VÀ ĐỌC DỮ LIỆU ---
-client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"]) # <--- ĐIỀN API KEY CỦA BẠN VÀO ĐÂY
+try:
+    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+except Exception as e:
+    st.error("⚠️ Chưa tìm thấy API Key trong Secrets.")
 
 try:
     with open("dulieu_tuyensinh.txt", "r", encoding="utf-8") as f:
@@ -34,6 +36,13 @@ Bạn là Chuyên gia Tư vấn Hướng nghiệp học đường.
 [TỪ ĐIỂN NGÀNH NGHỀ & TUYỂN SINH]:
 {tuyen_sinh_data}
 """
+
+# Cấu hình AI chuẩn
+model = genai.GenerativeModel(
+    model_name="gemini-1.5-flash",
+    system_instruction=system_prompt,
+    generation_config={"temperature": 0.4}
+)
 
 # --- BIẾN LƯU TRỮ ---
 if "messages" not in st.session_state: st.session_state.messages = []
@@ -93,11 +102,7 @@ elif st.session_state.active_tab == "Chat":
         with st.chat_message("assistant"):
             with st.spinner("Đang phân tích..."):
                 try:
-                    response = client.models.generate_content(
-                      model="gemini-1.5-flash",
-                        contents=enhanced_prompt,
-                        config=types.GenerateContentConfig(system_instruction=system_prompt, temperature=0.4)
-                    )
+                    response = model.generate_content(enhanced_prompt)
                     st.markdown(response.text)
                     st.session_state.messages.append({"role": "assistant", "content": response.text})
                 except Exception as e:
